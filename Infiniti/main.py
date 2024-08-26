@@ -663,7 +663,7 @@ def Step2(driver, files_dir, summary_file):
         time.sleep(10)
 
         cancelButton = driver.find_element(
-            By.XPATH, "/html/body/div[3]/div[3]/div/div[6]/div[2]/div/button[2]"
+            By.XPATH, "/html/body/div[3]/div[3]/div/div[6]/div[2]/div/button[1]"
         )
         cancelButton.click()
         time.sleep(5)

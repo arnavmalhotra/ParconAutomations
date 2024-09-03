@@ -591,7 +591,7 @@ Func RestartProcess()
     ; Restart the application
     Local $startTime = TimerInit()
     Local $timeout = 60000 ; 60 seconds timeout
-    
+    Sleep(60000)
     While 1
         OpenAppAndLogin()
         
@@ -655,9 +655,10 @@ EndFunc
 
 Func HandleSecurityDialog()
     WriteLog("Handling security dialog")
-    Local $hWnd = WinWait("Windows Security", "", 1000)
+    Local $hWnd = WinWait("Windows Security", "", 10000)
     If $hWnd Then
         WinActivate($hWnd)
+		Sleep(3000)
         Send("!o")  ; Send Alt+O
         Sleep(1000)
         WriteLog("Handled Windows Security dialog")
@@ -698,7 +699,7 @@ Func HandleDeliveryInstructionsPopup()
             WinActivate("Delivery")
             Send("{ENTER}")
             WriteLog("Handled Delivery Instructions popup")
-Sleep(1000)
+			Sleep(1000)
             Return
         EndIf
         Sleep(100)
@@ -715,23 +716,59 @@ Func ClickUploadPDF()
 EndFunc
 
 Func CloseFileUploader()
-    WriteLog("Closing File Uploader")
-    Local $timeout = 600000  ; 10 seconds timeout
-    Local $start = TimerInit()
-    
-    While TimerDiff($start) < $timeout
-        If WinExists("File Uploader") Then
-            Sleep(1000)
-            WinActivate("File Uploader")
-            ControlClick("File Uploader", "", "[REGEXPCLASS:^(WindowsForms10\.BUTTON\.app\..*)$; INSTANCE:1]")
-            WinWaitClose("File Uploader", "", 10)
-            Sleep(1000)
-            WriteLog("File Uploader closed")
-            Return
+    WriteLog("Attempting to close File Uploader")
+    Local $windowTitle = "File Uploader"
+    Local $maxAttempts = 10
+    Local $attemptTimeout = 5000  ; 5 seconds timeout for each attempt
+    Local $overallTimeout = 60000  ; 30 seconds overall timeout
+    Local $overallStart = TimerInit()
+
+    For $attempt = 1 To $maxAttempts
+        WriteLog("Attempt " & $attempt & " to close File Uploader")
+        
+        ; Wait for the File Uploader window to appear and become active
+        Local $hWnd = WinWait($windowTitle, "", 20)
+        
+        If $hWnd Then
+            WriteLog("File Uploader window detected")
+            
+            ; Ensure the window is active
+            WinActivate($hWnd)
+            If Not WinWaitActive($hWnd, "", 5) Then
+                WriteLog("Failed to activate File Uploader window")
+                ContinueLoop
+            EndIf
+            
+            ; Click the close button
+            ControlClick($hWnd, "", "[REGEXPCLASS:^(WindowsForms10\.BUTTON\.app\..*)$; INSTANCE:1]")
+            
+            ; Wait for the window to close
+            Local $attemptStart = TimerInit()
+            While WinExists($hWnd) And TimerDiff($attemptStart) < $attemptTimeout
+                If TimerDiff($overallStart) >= $overallTimeout Then
+                    WriteLog("Overall timeout reached while trying to close File Uploader")
+					RestartProcess()
+                    Return False
+                EndIf
+                Sleep(100)
+            WEnd
+            
+            If Not WinExists($hWnd) Then
+                WriteLog("File Uploader closed successfully on attempt " & $attempt)
+                Return True
+            EndIf
+            
+            WriteLog("Failed to close File Uploader on attempt " & $attempt)
+        Else
+            WriteLog("File Uploader window not found")
+            Return True  ; Assume it's already closed if we can't find it
         EndIf
-        Sleep(100)
-    WEnd
-    WriteLog("File Uploader not found within timeout")
+        
+        Sleep(1000)  ; Wait a second before the next attempt
+    Next
+
+    WriteLog("Failed to close File Uploader after " & $maxAttempts & " attempts")
+    Return False
 EndFunc
 
 Func EnterUserPin()
@@ -772,17 +809,21 @@ Func ContinuousProcessing()
     Local $aSaleNumbers = [$sSaleNumber, $sSaleNumber, $sSaleNumber-1, $sSaleNumber, $sSaleNumber-2, $sSaleNumber, $sSaleNumber-1]  ; Fixed array of sale numbers
     Local $currentIndex = 0
     Local $lastActivityTime = TimerInit()
-    Local $inactivityTimeout = 10 * 60 * 1000  ; 10 minutes in milliseconds
+    Local $inactivityTimeout = 5 * 60 * 1000  ; 10 minutes in milliseconds
 
     While 1
         If CheckForDisconnection() Then
             WriteLog("Disconnection detected. Moving to next bidder.")
-            ContinueLoop
+            RestartProcess()
         EndIf
 
         WinActivate("e-Auction")
         SetStatus($sStatus)
         $currentSaleNumber = $aSaleNumbers[$currentIndex]
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         ProcessDealBook($currentSaleNumber)
 
         $currentIndex += 1
@@ -792,7 +833,7 @@ Func ContinuousProcessing()
        
         ; Check for inactivity
         If TimerDiff($lastActivityTime) > $inactivityTimeout Then
-            WriteLog("Bot inactive for more than 10 minutes. Moving to next bidder.")
+            WriteLog("Bot inactive for more than 5 minutes. Moving to next bidder.")
             ContinueLoop
         EndIf
         
@@ -866,7 +907,7 @@ Func ProcessDealBook($currentSaleNumber)
     For $i = 0 To UBound($aBidders) - 1
         If CheckForDisconnection() Then
             WriteLog("Disconnection detected. Moving to next bidder.")
-            ContinueLoop
+            RestartProcess()
         EndIf
         WinActivate("Auction")
         SetBidder($aBidders[$i])
@@ -875,19 +916,36 @@ Func ProcessDealBook($currentSaleNumber)
             WriteLog("Timeout waiting for 'Please Wait' to disappear. Moving to next bidder.")
             ContinueLoop
         EndIf
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         If DetectAndHandlePopup() Then
             WriteLog("No data found for bidder: " & $aBidders[$i] & ". Moving to next bidder.")
             ContinueLoop
         EndIf
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         ClickSelectUnselectAll()
         ClickGetPDF()
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         If noDO() Then
             WriteLog("No data found for bidder: " & $aBidders[$i] & ". Moving to next bidder.")
             ContinueLoop
         EndIf
         HandleDeliveryInstructionsPopup()
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         If Not $firstSuccesfulData Then
             If $sCertificateSelection = "Auto" Then
+				sleep(5000)
                 HandleSecurityDialog()
             Else
                 MsgBox(0, "Certificate", "Please select the correct certificate")
@@ -899,24 +957,37 @@ Func ProcessDealBook($currentSaleNumber)
             EndIf
             $firstSuccesfulData = True
         EndIf
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         WinActivate("e-Auction")
         If CheckForDisconnection() Then
             WriteLog("Disconnection detected. Moving to next bidder.")
-            ContinueLoop
+            RestartProcess()
         EndIf
         
         HandleDeliveryInstructionsPopup()
         Sleep(1000)
         WinActivate("e-Auction")
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         ClickUploadPDF()
         HandleDeliveryInstructionsPopup()
+        If CheckForDisconnection() Then
+            WriteLog("Disconnection detected. Moving to next bidder.")
+            RestartProcess()
+        EndIf
         Sleep(5000)
+		DetectAndHandlePopup()
         CloseFileUploader()
         WinActivate("e-Auction")
 
         If CheckForDisconnection() Then
             WriteLog("Disconnection detected. Moving to next bidder.")
-            ContinueLoop
+            RestartProcess()
         EndIf
     Next
     WriteLog("Deal book processing completed for sale number: " & $currentSaleNumber)

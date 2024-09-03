@@ -350,13 +350,13 @@ def login(driver, username, password):
     )
     username_field.send_keys(username)
     logging.info(f"Entered username: {username}")
-    time.sleep(2)  # Increased delay
+    time.sleep(1)  # Increased delay
     password_field = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By. CSS_SELECTOR, "input[name='password']"))
     )
     password_field.send_keys(password)
     logging.info("Entered password")
-    time.sleep(2)  # Increased delay
+    time.sleep(1)  # Increased delay
     try:
         sign_in_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable(
@@ -372,7 +372,7 @@ def login(driver, username, password):
         )
     sign_in_button.click()
     logging.info("Successfully clicked the Sign in button")
-    time.sleep(5)  # Increased delay
+    time.sleep(1)  # Increased delay
 
 
 def Step1(driver, files_dir):
@@ -457,7 +457,7 @@ def Step2(driver, files_dir, summary_file):
     WebDriverWait(driver, 60).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
     )
-    time.sleep(5)  # Increased delay
+    time.sleep(2)  # Increased delay
 
     for index, row in df.iterrows():
         logging.info(f"\nProcessing row {index + 1}")
@@ -485,12 +485,12 @@ def Step2(driver, files_dir, summary_file):
         WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
         )
-        time.sleep(5)  # Increased delay
+        time.sleep(2)  # Increased delay
 
         logging.info(f"Uploading PDF file: {pdf_file}")
         file_input = driver.find_element(By.CSS_SELECTOR, "input[type=file]")
         file_input.send_keys(pdf_file)
-        time.sleep(5)  # Increased delay
+        time.sleep(2)  # Increased delay
 
         buying_type = str(row["BUYING TYPE"])
         logging.info(f"Selecting Buying Type: {buying_type}")
@@ -693,7 +693,7 @@ def Step2(driver, files_dir, summary_file):
         )
         cancelButton.click()
         logging.info("Clicked cancel button")
-        time.sleep(5)  # Increased delay
+        time.sleep(2)  # Increased delay
 
     logging.info("Invoice processing completed.")
 
@@ -701,7 +701,7 @@ def Step2(driver, files_dir, summary_file):
 def Step3(driver, download_dir, from_date, to_date):
     logging.info("Starting Step3 function")
     click_element(driver, "#dashboard", "Home Button")
-    time.sleep(5)
+    time.sleep(2)
 
     WebDriverWait(driver, 60).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
@@ -712,7 +712,7 @@ def Step3(driver, download_dir, from_date, to_date):
         "#root > div > div > div > header > div > div.i-primary-nav.MuiBox-root.css-1dzmjrl > button:nth-child(2)",
         "Tea Private Button",
     )
-    time.sleep(5)
+    time.sleep(2)
     WebDriverWait(driver, 60).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
     )
@@ -730,7 +730,7 @@ def Step3(driver, download_dir, from_date, to_date):
     WebDriverWait(driver, 60).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".MuiDataGrid-root"))
     )
-    time.sleep(5)
+    time.sleep(2)
     # Add date range selection
     from_date_input = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located(
@@ -761,7 +761,7 @@ def Step3(driver, download_dir, from_date, to_date):
     time.sleep(2)  # Increased delay
 
     # Wait for the table to update
-    time.sleep(5)
+    time.sleep(2)
 
     page_num = 1
     downloads_remaining = False
@@ -795,7 +795,7 @@ def Step3(driver, download_dir, from_date, to_date):
 
                 ActionChains(driver).move_to_element(download_div).click().perform()
                 driver.execute_script("window.scrollBy(0, 300);")
-                time.sleep(5)
+                time.sleep(2)
 
                 list_of_files = glob.glob(os.path.join(download_dir, "*"))
                 if list_of_files:
@@ -820,7 +820,7 @@ def Step3(driver, download_dir, from_date, to_date):
                 logging.error(f"Error processing row: {e}")
 
         try:
-            time.sleep(5)
+            time.sleep(2)
             next_button = WebDriverWait(driver, 60).until(
                 EC.element_to_be_clickable(
                     (By.XPATH, "//button[@aria-label='Go to next page']")
